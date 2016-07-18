@@ -1,0 +1,8 @@
+#!/bin/bash
+image='kbai/grip'
+dir="${1:-$PWD}"
+if [[ -f "$dir" ]];then
+    file=$(basename "$dir")
+    dir=$(dirname "$dir")
+fi
+docker run --rm -it -P -v "$dir:/data" "$image" "$file"
