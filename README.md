@@ -34,6 +34,12 @@ folder within your `$PATH`:
 cp grip-docker ~/bin/
 ```
 
+Or use the Makefile:
+
+* `make install` to install to `/usr/local/bin/grip-docker`
+* `make install PREFIX=$HOME/.local` to install to `$HOME/.local/bin/grip-docker`
+* `make uninstall` to uninstall
+
 ## Usage
 
 You can run it as a docker container or use the `./grip-docker` bash script:
