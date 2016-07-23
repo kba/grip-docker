@@ -1,5 +1,5 @@
 # grip-docker
-Run [grip](/joeyespo/grip) Markdown renderer in a docker container
+Run [grip](https://github.com/joeyespo/grip) Markdown renderer in a docker container
 
 <!-- BEGIN-MARKDOWN-TOC -->
 * [Why](#why)
@@ -13,7 +13,7 @@ Run [grip](/joeyespo/grip) Markdown renderer in a docker container
 
 ## Why
 
-[grip](/joeyespo/grip) is a very useful tool to locally render
+[grip](https://github.com/joeyespo/grip) is a very useful tool to locally render
 README.md and other markdown content just as it appears on Github.
 
 This project bundles grip, along with text mode browsers
