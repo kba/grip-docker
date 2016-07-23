@@ -1,0 +1,3 @@
+[submodule "grip"]
+	path = grip
+	url = https://github.com/joeyespo/grip

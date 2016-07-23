@@ -2,8 +2,11 @@
 IMAGE='kbai/grip'
 declare -a GRIP_ARGS
 declare -a DOCKER_ARGS
-GRIP_PORT="6419"
-PORT_RANGE="6419:6429"
+CONTAINER_ADDR="0.0.0.0"
+CONTAINER_PORT="6419"
+HOST_ADDR="localhost"
+HOST_PORT=
+HOST_PORT_RANGE="6419:6429"
 
 usage () {
     echo "Usage: $(basename "$0") [options] [grip-options]
@@ -12,7 +15,7 @@ Options:
   --help            Use this help
   --lynx            Use lynx text browser
   --elinks          Use elinks text browser
-  --ports=FROM:TO   Use first free port in range. Default: '$PORT_RANGE'
+  --ports=FROM:TO   Use first free port in range. Default: '$HOST_PORT_RANGE'
   -d --detach       Run in background
   -b --browser      Open in browser"
     docker run "$IMAGE" --help |sed '1,/^Options/d'|grep -v '^\s*-b'
@@ -28,9 +31,9 @@ port_in_use () {
 while [[ "$1" = -* ]];do
     case "$1" in
         --help) usage; exit ;;
-        --lynx|--elinks) OPEN_IN_BROWSER=true; BROWSER="${1:2}" ;;
-        --ports*) PORT_RANGE="${1##*=}" ;;
-        -b|--browser) OPEN_IN_BROWSER=true ;;
+        --lynx|--elinks) OPEN_IN_CONTAINER=true; BROWSER="${1:2}" ;;
+        --ports*) HOST_PORT_RANGE="${1##*=}" ;;
+        -b|--browser) OPEN_IN_HOST=true ;;
         -d|--detach) DETACH=true ;;
         *) GRIP_ARGS+=("$1") ;;
     esac
@@ -38,41 +41,36 @@ while [[ "$1" = -* ]];do
 done
 
 # Conflicting options
-if [[ -n "$OPEN_IN_BROWSER" && -n "$DETACH" ]];then
-    >&2 echo "Opening in browser and --detach are mutually exclusive"
+if [[ -n "$OPEN_IN_CONTAINER" && -n "$DETACH" ]];then
+    >&2 echo "--elinks/--lynx and --detach are mutually exclusive"
     exit 1
 fi
 
 # Search an open port
-for i in $(seq "${PORT_RANGE%%:*}" "${PORT_RANGE##*:}");do
+for i in $(seq "${HOST_PORT_RANGE%%:*}" "${HOST_PORT_RANGE##*:}");do
     if ! port_in_use "$i";then
-        >&2 echo "Using port $i"
-        port="$i"
-        container="grip_$port"
+        >&2 echo "Using host port $i"
+        HOST_PORT="$i"
+        container="grip_$HOST_PORT"
         break
     fi
 done
 
-# No open ports
-if [[ -z "$port" ]];then
-    >&2 echo "No open ports in range '$PORT_RANGE'"
+# No open HOST_PORTs
+if [[ -z "$HOST_PORT" ]];then
+    >&2 echo "No open ports in range '$HOST_PORT_RANGE'"
     exit 1
 fi
 
 # Logic to open a browser
-if [[ "$OPEN_IN_BROWSER" = true ]];then
-    case "$BROWSER" in
-        elinks|lynx)
-            DOCKER_ARGS+=(--env "BROWSER=$BROWSER")
-            DOCKER_ARGS+=(--env "TERM=$TERM")
-            DOCKER_ARGS+=(--env "GRIPHOME=/root/.grip-quiet")
-            GRIP_ARGS+=(--browser)
-            GRIP_ARGS+=(--quiet)
-            ;;
-        *)
-            (sleep 2; python -m webbrowser "http://localhost:$port") &
-            ;;
-    esac
+if [[ "$OPEN_IN_CONTAINER" = true ]];then
+    DOCKER_ARGS+=(--env "BROWSER=$BROWSER")
+    DOCKER_ARGS+=(--env "TERM=$TERM")
+    DOCKER_ARGS+=(--env "GRIPHOME=/root/.grip-quiet")
+    GRIP_ARGS+=(--browser)
+    GRIP_ARGS+=(--quiet)
+elif [[ "$OPEN_IN_HOST" = true ]];then
+    (sleep 2; python -m webbrowser "http://$HOST_ADDR:$HOST_PORT") &
 fi
 
 # Logic for detach
@@ -89,7 +87,8 @@ if [[ ! -d "$dir" ]];then
     dir=$(cd "$(dirname "$dir")";pwd)
 fi
 DOCKER_ARGS+=(-v "${dir}:/data")
-DOCKER_ARGS+=(-p $port:$GRIP_PORT)
+DOCKER_ARGS+=(-p $HOST_PORT:$CONTAINER_PORT)
 DOCKER_ARGS+=(--name "$container")
-echo docker run "${DOCKER_ARGS[@]}" "$IMAGE" "${GRIP_ARGS[@]}" "$file" "0.0.0.0:$GRIP_PORT"
-docker run "${DOCKER_ARGS[@]}" "$IMAGE" "${GRIP_ARGS[@]}" "$file" "0.0.0.0:$GRIP_PORT"
+echo docker run "${DOCKER_ARGS[@]}" "$IMAGE" "${GRIP_ARGS[@]}" "$file" "${CONTAINER_ADDR}:${CONTAINER_PORT}"
+docker run "${DOCKER_ARGS[@]}" "$IMAGE" "${GRIP_ARGS[@]}" "$file" "${CONTAINER_ADDR}:${CONTAINER_PORT}" | \
+    sed "s/${CONTAINER_ADDR}:${CONTAINER_PORT}/${HOST_ADDR}:${HOST_PORT}/"

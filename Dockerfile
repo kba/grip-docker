@@ -1,15 +1,22 @@
 FROM alpine:latest
 MAINTAINER Konstantin Baierer <konstantin.baierer@gmail.com>
+
 RUN apk add --update --progress \
     python \
     python-dev \
     elinks \
     lynx \
-    py-pip \
+    py-setuptools \
     build-base \
-  && pip install grip \
-  && apk del --purge build-base \
-  && rm -rf /var/cache/apk/*
+    py-openssl \
+    ca-certificates
+
+ADD grip /tmp/grip
+
+RUN cd /tmp/grip \
+  && python setup.py install \
+  && apk del --purge py-pip build-base py-openssl ca-certificates \
+  && rm -rf /var/cache/apk/* /tmp/grip
 
 WORKDIR /data
 
